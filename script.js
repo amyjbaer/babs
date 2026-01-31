@@ -252,19 +252,21 @@ function updateHistory() {
 
 // Update distribution chart
 function updateDistribution() {
+    const totalRolls = rollHistory.length;
     const maxCount = Math.max(...Object.values(distribution));
 
     distributionDisplay.innerHTML = '';
     for (let i = 2; i <= 12; i++) {
         const count = distribution[i];
-        const percentage = maxCount > 0 ? (count / maxCount * 100) : 0;
+        const percentageOfTotal = totalRolls > 0 ? (count / totalRolls * 100) : 0;
+        const barWidth = maxCount > 0 ? (count / maxCount * 100) : 0;
 
         const distItem = document.createElement('div');
         distItem.className = 'dist-item';
         distItem.innerHTML = `
             <div class="dist-number">${i}</div>
-            <div class="dist-count">${count}</div>
-            <div class="dist-bar" style="width: ${percentage}%"></div>
+            <div class="dist-count">${percentageOfTotal.toFixed(1)}%</div>
+            <div class="dist-bar" style="width: ${barWidth}%"></div>
         `;
         distributionDisplay.appendChild(distItem);
     }
