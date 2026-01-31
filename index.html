@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>B.A.B.S. - Dice Roller</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Settings Page -->
+    <div class="page" id="settingsPage">
+        <div class="container">
+            <h1>B.A.B.S.</h1>
+            
+            <div class="settings-content">
+                <h2>Seven Frequency Control</h2>
+                <p class="description">Configure how often sevens appear in your dice rolls</p>
+
+                <div class="setting-group">
+                    <label class="setting-label">
+                        <input type="checkbox" id="enableWindow" checked>
+                        <span class="setting-title">Sliding Window Control</span>
+                    </label>
+                    <div class="setting-inputs">
+                        <label>
+                            Maximum
+                            <input type="number" id="maxFrequency" min="1" max="10" value="2" class="inline-input">
+                            seven(s) per
+                            <input type="number" id="rollWindow" min="2" max="100" value="3" class="inline-input">
+                            rolls
+                        </label>
+                    </div>
+                </div>
+
+                <div class="setting-group">
+                    <label class="setting-label">
+                        <input type="checkbox" id="enablePercentage" checked>
+                        <span class="setting-title">Overall Percentage Control</span>
+                    </label>
+                    <div class="setting-inputs">
+                        <label>
+                            Keep sevens at or below
+                            <input type="number" id="maxPercentage" min="1" max="50" value="16.67" step="0.1" class="inline-input">
+                            % of all rolls
+                        </label>
+                    </div>
+                </div>
+
+                <div class="info-box">
+                    <strong>Natural Probability:</strong> 16.67% (1 in 6 rolls)
+                </div>
+
+                <button class="primary-button" id="startButton">Let's Roll!</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dice Rolling Page -->
+    <div class="page hidden" id="dicePage">
+        <div class="container">
+            <div class="header-bar">
+                <h1>B.A.B.S.</h1>
+                <button class="icon-button" id="settingsButton" title="Settings">⚙️</button>
+            </div>
+
+            <div class="dice-container">
+                <div class="die" id="die1" data-value="1">
+                    <div class="dot"></div>
+                    <div class="dot"></div>
+                    <div class="dot"></div>
+                    <div class="dot"></div>
+                    <div class="dot"></div>
+                    <div class="dot"></div>
+                    <div class="dot"></div>
+                </div>
+                <div class="die" id="die2" data-value="1">
+                    <div class="dot"></div>
+                    <div class="dot"></div>
+                    <div class="dot"></div>
+                    <div class="dot"></div>
+                    <div class="dot"></div>
+                    <div class="dot"></div>
+                    <div class="dot"></div>
+                </div>
+
+                <div class="prevention-effect" id="preventionEffect">
+                    <div class="blocked-seven">7</div>
+                    <div class="prevention-text">BLOCKED!</div>
+                    <div class="particles" id="particles"></div>
+                </div>
+            </div>
+
+            <div class="total" id="total">Total: -</div>
+
+            <button class="roll-button" id="rollButton">Roll Dice</button>
+
+            <div class="quick-stats">
+                <div class="quick-stat">
+                    <span class="quick-stat-label">Rolls:</span>
+                    <span class="quick-stat-value" id="quickTotalRolls">0</span>
+                </div>
+                <div class="quick-stat">
+                    <span class="quick-stat-label">Sevens:</span>
+                    <span class="quick-stat-value" id="quickSevensCount">0</span>
+                </div>
+                <div class="quick-stat">
+                    <span class="quick-stat-label">Frequency:</span>
+                    <span class="quick-stat-value" id="quickSevenFrequency">0%</span>
+                </div>
+            </div>
+
+            <button class="secondary-button" id="viewStatsButton">View Detailed Statistics</button>
+        </div>
+    </div>
+
+    <!-- Stats Page -->
+    <div class="page hidden" id="statsPage">
+        <div class="container">
+            <div class="header-bar">
+                <button class="back-button" id="backToDiceButton">← Back to Dice</button>
+                <h2>Detailed Statistics</h2>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <div class="stat-label">Total Rolls</div>
+                    <div class="stat-value" id="totalRolls">0</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Sevens Rolled</div>
+                    <div class="stat-value" id="sevensCount">0</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Seven Frequency</div>
+                    <div class="stat-value" id="sevenFrequency">0%</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Expected</div>
+                    <div class="stat-value">16.67%</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Sevens Prevented</div>
+                    <div class="stat-value" id="preventedCount">0</div>
+                </div>
+            </div>
+
+            <h3>Roll History (Last 20)</h3>
+            <div class="history" id="history"></div>
+
+            <h3>Distribution</h3>
+            <div class="distribution" id="distribution"></div>
+
+            <button class="reset-button" id="resetButton">Reset All Statistics</button>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
+
