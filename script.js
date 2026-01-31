@@ -142,6 +142,12 @@ function rollDice() {
     const maxAttempts = 100;
     let sevenWasPrevented = false;
 
+    // Clear any previous celebration effects
+    const container = document.querySelector('.container');
+    container.classList.remove('celebrate-seven');
+    die1.classList.remove('pulse-seven');
+    die2.classList.remove('pulse-seven');
+
     do {
         value1 = rollSingleDie();
         value2 = rollSingleDie();
