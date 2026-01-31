@@ -11,12 +11,15 @@
 </head>
 <body>
     <!-- Settings Page -->
-    <div class="page" id="settingsPage">
+    <div class="page hidden" id="settingsPage">
         <div class="container">
-            <h1>B.A.B.S.</h1>
-            
+            <div class="header-bar">
+                <button class="back-button" id="backFromSettingsButton">← Back to Dice</button>
+                <h2>Settings</h2>
+            </div>
+
             <div class="settings-content">
-                <h2>Seven Frequency Control</h2>
+                <h3>Seven Frequency Control</h3>
                 <p class="description">Configure how often sevens appear in your dice rolls</p>
 
                 <div class="setting-group">
@@ -52,14 +55,12 @@
                 <div class="info-box">
                     <strong>Natural Probability:</strong> 16.67% (1 in 6 rolls)
                 </div>
-
-                <button class="primary-button" id="startButton">Let's Roll!</button>
             </div>
         </div>
     </div>
 
     <!-- Dice Rolling Page -->
-    <div class="page hidden" id="dicePage">
+    <div class="page" id="dicePage">
         <div class="container">
             <div class="header-bar">
                 <h1>B.A.B.S.</h1>
@@ -154,6 +155,58 @@
             <div class="distribution" id="distribution"></div>
 
             <button class="reset-button" id="resetButton">Reset All Statistics</button>
+        </div>
+    </div>
+
+    <!-- Welcome Modal -->
+    <div class="modal-overlay hidden" id="welcomeModal">
+        <div class="modal-content">
+            <button class="modal-close" id="closeWelcomeModalX" aria-label="Close modal">×</button>
+            <div class="modal-header">
+                <h2>Welcome to B.A.B.S.! 🎲</h2>
+                <div class="modal-progress">
+                    <span class="progress-dot active" data-step="0"></span>
+                    <span class="progress-dot" data-step="1"></span>
+                    <span class="progress-dot" data-step="2"></span>
+                </div>
+            </div>
+
+            <div class="modal-body">
+                <div class="welcome-section active" data-step="0">
+                    <h3>What is B.A.B.S.?</h3>
+                    <p>B.A.B.S. is a smart dice roller that lets you control how often sevens appear in your rolls. Perfect for board games where you want to reduce the frequency of certain outcomes!</p>
+                </div>
+
+                <div class="welcome-section" data-step="1">
+                    <h3>How It Works</h3>
+                    <p>Normally, rolling two dice gives you a 16.67% chance of getting a seven. With B.A.B.S., you can:</p>
+                    <ul class="feature-list">
+                        <li><strong>Limit sevens in a rolling window</strong> - e.g., max 2 sevens per 3 rolls</li>
+                        <li><strong>Control overall percentage</strong> - keep sevens at or below your target</li>
+                        <li><strong>Track detailed statistics</strong> - see how your rolls compare to natural probability</li>
+                    </ul>
+                </div>
+
+                <div class="welcome-section" data-step="2">
+                    <h3>Getting Started</h3>
+                    <ol class="feature-list">
+                        <li>Click <strong>"Roll Dice"</strong> to start rolling</li>
+                        <li>Visit <strong>Settings ⚙️</strong> to customize seven frequency</li>
+                        <li>Check <strong>"View Detailed Statistics"</strong> to see your roll history and distribution</li>
+                    </ol>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <div class="modal-navigation">
+                    <button class="modal-nav-button" id="prevWelcomeStep" disabled>← Previous</button>
+                    <button class="modal-nav-button primary" id="nextWelcomeStep">Next →</button>
+                </div>
+                <label class="dont-show-again">
+                    <input type="checkbox" id="dontShowAgain">
+                    <span>Don't show this again</span>
+                </label>
+            </div>
         </div>
     </div>
 

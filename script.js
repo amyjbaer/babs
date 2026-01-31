@@ -21,13 +21,22 @@ const pages = {
     stats: document.getElementById('statsPage')
 };
 
-let currentPage = 'settings';
+let currentPage = 'dice';
 
 function showPage(pageName) {
     Object.keys(pages).forEach(key => {
         pages[key].classList.toggle('hidden', key !== pageName);
     });
     currentPage = pageName;
+
+    // Update settings form when opening settings page
+    if (pageName === 'settings') {
+        document.getElementById('enableWindow').checked = enableWindow;
+        document.getElementById('enablePercentage').checked = enablePercentage;
+        document.getElementById('maxFrequency').value = maxSevens;
+        document.getElementById('rollWindow').value = rollWindow;
+        document.getElementById('maxPercentage').value = maxPercentage;
+    }
 }
 
 // DOM elements
@@ -50,14 +59,14 @@ const quickSevensCount = document.getElementById('quickSevensCount');
 const quickSevenFrequency = document.getElementById('quickSevenFrequency');
 
 // Navigation buttons
-const startButton = document.getElementById('startButton');
+const backFromSettingsButton = document.getElementById('backFromSettingsButton');
 const viewStatsButton = document.getElementById('viewStatsButton');
 const backToDiceButton = document.getElementById('backToDiceButton');
 const settingsButton = document.getElementById('settingsButton');
 
 // Event listeners - Navigation
-startButton.addEventListener('click', () => {
-    // Save settings
+backFromSettingsButton.addEventListener('click', () => {
+    // Save settings when leaving settings page
     enableWindow = document.getElementById('enableWindow').checked;
     enablePercentage = document.getElementById('enablePercentage').checked;
     maxSevens = parseInt(document.getElementById('maxFrequency').value);
@@ -135,6 +144,15 @@ function shouldAllowSeven() {
     return allowSeven;
 }
 
+// Play dice roll sound using uploaded audio file
+function playDiceRollSound() {
+    const audio = new Audio('dice.mp3');
+    audio.volume = 0.6; // Adjust volume as needed
+    audio.play().catch(err => {
+        console.log('Audio playback failed:', err);
+    });
+}
+
 // Roll two dice with frequency control
 function rollDice() {
     let value1, value2, total;
@@ -147,6 +165,9 @@ function rollDice() {
     container.classList.remove('celebrate-seven');
     die1.classList.remove('pulse-seven');
     die2.classList.remove('pulse-seven');
+
+    // Play dice roll sound
+    playDiceRollSound();
 
     do {
         value1 = rollSingleDie();
@@ -250,25 +271,132 @@ function updateHistory() {
     }).reverse().join('');
 }
 
+// Expected probabilities for two dice (theoretical bell curve)
+const expectedProbabilities = {
+    2: 1/36,   // 2.78%
+    3: 2/36,   // 5.56%
+    4: 3/36,   // 8.33%
+    5: 4/36,   // 11.11%
+    6: 5/36,   // 13.89%
+    7: 6/36,   // 16.67%
+    8: 5/36,   // 13.89%
+    9: 4/36,   // 11.11%
+    10: 3/36,  // 8.33%
+    11: 2/36,  // 5.56%
+    12: 1/36   // 2.78%
+};
+
 // Update distribution chart
 function updateDistribution() {
     const totalRolls = rollHistory.length;
-    const maxCount = Math.max(...Object.values(distribution));
 
-    distributionDisplay.innerHTML = '';
+    // Calculate actual percentages
+    const actualPercentages = {};
     for (let i = 2; i <= 12; i++) {
-        const count = distribution[i];
-        const percentageOfTotal = totalRolls > 0 ? (count / totalRolls * 100) : 0;
-        const barWidth = maxCount > 0 ? (count / maxCount * 100) : 0;
+        actualPercentages[i] = totalRolls > 0 ? (distribution[i] / totalRolls) : 0;
+    }
 
-        const distItem = document.createElement('div');
-        distItem.className = 'dist-item';
-        distItem.innerHTML = `
-            <div class="dist-number">${i}</div>
-            <div class="dist-count">${percentageOfTotal.toFixed(1)}%</div>
-            <div class="dist-bar" style="width: ${barWidth}%"></div>
+    // Find max value for scaling (use the higher of actual or expected)
+    const maxActual = Math.max(...Object.values(actualPercentages));
+    const maxExpected = Math.max(...Object.values(expectedProbabilities));
+    const maxValue = Math.max(maxActual, maxExpected, 0.01); // Ensure non-zero
+
+    // Create SVG line graph
+    const graphHeight = 200;
+    const padding = 10;
+
+    // Calculate points for both lines
+    const expectedPoints = [];
+    const actualPoints = [];
+
+    for (let i = 2; i <= 12; i++) {
+        const x = ((i - 2) / 10) * 100; // 0% to 100%
+        const expectedY = graphHeight - ((expectedProbabilities[i] / maxValue) * (graphHeight - padding * 2)) - padding;
+        const actualY = graphHeight - ((actualPercentages[i] / maxValue) * (graphHeight - padding * 2)) - padding;
+
+        expectedPoints.push({ x, y: expectedY });
+        actualPoints.push({ x, y: actualY });
+    }
+
+    // Create smooth curves - simple quadratic curves between points
+    function createSmoothPath(points) {
+        if (points.length === 0) return '';
+        if (points.length === 1) return `M ${points[0].x},${points[0].y}`;
+
+        let path = `M ${points[0].x},${points[0].y}`;
+
+        // Use simple quadratic curves
+        for (let i = 0; i < points.length - 1; i++) {
+            const current = points[i];
+            const next = points[i + 1];
+
+            // Control point is at the midpoint horizontally, averaging the Y values
+            const cpx = (current.x + next.x) / 2;
+            const cpy = (current.y + next.y) / 2;
+
+            path += ` Q ${cpx},${cpy} ${next.x},${next.y}`;
+        }
+
+        return path;
+    }
+
+    const expectedPath = createSmoothPath(expectedPoints);
+    const actualPath = createSmoothPath(actualPoints);
+
+    distributionDisplay.innerHTML = `
+        <svg class="line-graph" viewBox="0 0 100 ${graphHeight}" preserveAspectRatio="none">
+            <defs>
+                <linearGradient id="actualGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" style="stop-color:#ec4899;stop-opacity:1" />
+                    <stop offset="100%" style="stop-color:#d946ef;stop-opacity:1" />
+                </linearGradient>
+            </defs>
+            <!-- Expected line (bell curve) -->
+            <path
+                class="line expected-line"
+                d="${expectedPath}"
+                fill="none"
+            />
+            <!-- Actual line -->
+            <path
+                class="line actual-line"
+                d="${actualPath}"
+                fill="none"
+            />
+            <!-- Expected dots -->
+            ${expectedPoints.map(point => {
+                return `<circle cx="${point.x}" cy="${point.y}" r="0.8" class="dot expected-dot" />`;
+            }).join('')}
+            <!-- Actual dots -->
+            ${actualPoints.map(point => {
+                return `<circle cx="${point.x}" cy="${point.y}" r="0.8" class="dot actual-dot" />`;
+            }).join('')}
+        </svg>
+        <div class="x-axis-labels">
+            ${[2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(num => `
+                <div class="axis-label">
+                    <div class="label-number">${num}</div>
+                    <div class="label-count">${distribution[num]}</div>
+                </div>
+            `).join('')}
+        </div>
+    `;
+
+    // Add legend if not already present
+    if (!document.querySelector('.distribution-legend')) {
+        const legend = document.createElement('div');
+        legend.className = 'distribution-legend';
+        legend.innerHTML = `
+            <div class="legend-item">
+                <div class="legend-line expected"></div>
+                <span>Expected</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-line actual"></div>
+                <span>Actual</span>
+            </div>
         `;
-        distributionDisplay.appendChild(distItem);
+        distributionDisplay.parentElement.insertBefore(legend, distributionDisplay);
     }
 }
 
@@ -330,4 +458,111 @@ function createParticles() {
 
 // Initialize display
 updateDistribution();
+
+// ========================================
+// WELCOME MODAL
+// ========================================
+
+const welcomeModal = document.getElementById('welcomeModal');
+const closeWelcomeModalX = document.getElementById('closeWelcomeModalX');
+const dontShowAgainCheckbox = document.getElementById('dontShowAgain');
+const prevStepButton = document.getElementById('prevWelcomeStep');
+const nextStepButton = document.getElementById('nextWelcomeStep');
+const welcomeSections = document.querySelectorAll('.welcome-section');
+const progressDots = document.querySelectorAll('.progress-dot');
+
+let currentStep = 0;
+const totalSteps = welcomeSections.length;
+
+// Check if user has seen the welcome modal before
+function shouldShowWelcomeModal() {
+    const dontShowAgain = localStorage.getItem('dontShowWelcomeAgain');
+    return dontShowAgain !== 'true';
+}
+
+// Show welcome modal on first visit
+function showWelcomeModal() {
+    welcomeModal.classList.remove('hidden');
+    currentStep = 0;
+    updateWelcomeStep();
+}
+
+// Hide welcome modal
+function hideWelcomeModal() {
+    welcomeModal.classList.add('hidden');
+
+    // Only save to localStorage if "Don't show again" is checked
+    if (dontShowAgainCheckbox.checked) {
+        localStorage.setItem('dontShowWelcomeAgain', 'true');
+    }
+}
+
+// Update the visible step
+function updateWelcomeStep() {
+    // Update sections visibility
+    welcomeSections.forEach((section, index) => {
+        section.classList.toggle('active', index === currentStep);
+    });
+
+    // Update progress dots
+    progressDots.forEach((dot, index) => {
+        dot.classList.toggle('active', index === currentStep);
+    });
+
+    // Update button states
+    prevStepButton.disabled = currentStep === 0;
+
+    // Change next button to "Let's Roll!" on last step
+    if (currentStep === totalSteps - 1) {
+        nextStepButton.textContent = "Let's Roll! 🎲";
+        nextStepButton.classList.add('final-step');
+    } else {
+        nextStepButton.textContent = 'Next →';
+        nextStepButton.classList.remove('final-step');
+    }
+}
+
+// Go to next step
+function nextWelcomeStep() {
+    if (currentStep < totalSteps - 1) {
+        currentStep++;
+        updateWelcomeStep();
+    } else {
+        // On last step, close the modal
+        hideWelcomeModal();
+    }
+}
+
+// Go to previous step
+function prevWelcomeStep() {
+    if (currentStep > 0) {
+        currentStep--;
+        updateWelcomeStep();
+    }
+}
+
+// Event listeners
+nextStepButton.addEventListener('click', nextWelcomeStep);
+prevStepButton.addEventListener('click', prevWelcomeStep);
+closeWelcomeModalX.addEventListener('click', hideWelcomeModal);
+
+// Close modal when clicking outside of it
+welcomeModal.addEventListener('click', (e) => {
+    if (e.target === welcomeModal) {
+        hideWelcomeModal();
+    }
+});
+
+// Allow clicking on progress dots to jump to that step
+progressDots.forEach((dot, index) => {
+    dot.addEventListener('click', () => {
+        currentStep = index;
+        updateWelcomeStep();
+    });
+});
+
+// Show modal on first visit
+if (shouldShowWelcomeModal()) {
+    showWelcomeModal();
+}
 
