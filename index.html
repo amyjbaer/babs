@@ -19,41 +19,56 @@
             </div>
 
             <div class="settings-content">
-                <h3>Seven Frequency Control</h3>
-                <p class="description">Configure how often sevens appear in your dice rolls</p>
-
-                <div class="setting-group">
-                    <label class="setting-label">
-                        <input type="checkbox" id="enableWindow" checked>
-                        <span class="setting-title">Sliding Window Control</span>
-                    </label>
-                    <div class="setting-inputs">
-                        <label>
-                            Maximum
-                            <input type="number" id="maxFrequency" min="1" max="10" value="2" class="inline-input">
-                            seven(s) per
-                            <input type="number" id="rollWindow" min="2" max="100" value="3" class="inline-input">
-                            rolls
+                <div class="settings-section">
+                    <h3 class="section-title">🔊 Sound</h3>
+                    <div class="setting-row">
+                        <label class="toggle-label">
+                            <input type="checkbox" id="enableSound" checked>
+                            <span class="toggle-switch"></span>
+                            <span class="toggle-text">Dice Roll Sound Effects</span>
                         </label>
                     </div>
                 </div>
 
-                <div class="setting-group">
-                    <label class="setting-label">
-                        <input type="checkbox" id="enablePercentage" checked>
-                        <span class="setting-title">Overall Percentage Control</span>
-                    </label>
-                    <div class="setting-inputs">
-                        <label>
-                            Keep sevens at or below
-                            <input type="number" id="maxPercentage" min="1" max="50" value="16.67" step="0.1" class="inline-input">
-                            % of all rolls
-                        </label>
-                    </div>
-                </div>
+                <div class="settings-section">
+                    <h3 class="section-title">🎲 Seven Frequency Control</h3>
+                    <p class="section-description">Configure how often sevens appear in your dice rolls</p>
 
-                <div class="info-box">
-                    <strong>Natural Probability:</strong> 16.67% (1 in 6 rolls)
+                    <div class="setting-row">
+                        <label class="toggle-label">
+                            <input type="checkbox" id="enableWindow" checked>
+                            <span class="toggle-switch"></span>
+                            <span class="toggle-text">Sliding Window</span>
+                        </label>
+                        <div class="setting-detail">
+                            <label class="compact-label">
+                                Max
+                                <input type="number" id="maxFrequency" min="1" max="10" value="2" class="compact-input">
+                                seven(s) per
+                                <input type="number" id="rollWindow" min="2" max="100" value="3" class="compact-input">
+                                rolls
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="setting-row">
+                        <label class="toggle-label">
+                            <input type="checkbox" id="enablePercentage" checked>
+                            <span class="toggle-switch"></span>
+                            <span class="toggle-text">Overall Percentage</span>
+                        </label>
+                        <div class="setting-detail">
+                            <label class="compact-label">
+                                Keep at or below
+                                <input type="number" id="maxPercentage" min="1" max="50" value="16.67" step="0.1" class="compact-input">
+                                %
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="settings-info">
+                        Natural probability: 16.67% (1 in 6 rolls)
+                    </div>
                 </div>
             </div>
         </div>
@@ -151,7 +166,13 @@
             <h3>Roll History (Last 20)</h3>
             <div class="history" id="history"></div>
 
-            <h3>Distribution</h3>
+            <div class="distribution-header">
+                <h3>Distribution</h3>
+                <div class="view-toggle">
+                    <button class="toggle-btn active" id="toggleNumbers">Numbers</button>
+                    <button class="toggle-btn" id="toggleGraph">Graph</button>
+                </div>
+            </div>
             <div class="distribution" id="distribution"></div>
 
             <button class="reset-button" id="resetButton">Reset All Statistics</button>

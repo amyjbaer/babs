@@ -1,4 +1,5 @@
 - join a game feature so users can use their own phone
 - starting rolls to see who gets to go first
-- full color scheme change on seven, temporarily (flashing red, the whole thing bursts into flames etc)
+- full color scheme change on seven, temporarily (flashing red, the whole thing bursts into flames etc, bomb everything falls apart)
 - record our own voices saying the number
+- history to see how many rolls it takes for games to be completed and length of time

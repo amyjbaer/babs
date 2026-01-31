@@ -8,6 +8,8 @@ let maxSevens = 2;
 let rollWindow = 3;
 let maxPercentage = 16.67;
 let preventedSevens = 0;
+let enableSound = true; // Sound effects toggle
+let distributionView = 'numbers'; // 'numbers' or 'graph'
 
 // Initialize distribution
 for (let i = 2; i <= 12; i++) {
@@ -31,6 +33,7 @@ function showPage(pageName) {
 
     // Update settings form when opening settings page
     if (pageName === 'settings') {
+        document.getElementById('enableSound').checked = enableSound;
         document.getElementById('enableWindow').checked = enableWindow;
         document.getElementById('enablePercentage').checked = enablePercentage;
         document.getElementById('maxFrequency').value = maxSevens;
@@ -67,6 +70,7 @@ const settingsButton = document.getElementById('settingsButton');
 // Event listeners - Navigation
 backFromSettingsButton.addEventListener('click', () => {
     // Save settings when leaving settings page
+    enableSound = document.getElementById('enableSound').checked;
     enableWindow = document.getElementById('enableWindow').checked;
     enablePercentage = document.getElementById('enablePercentage').checked;
     maxSevens = parseInt(document.getElementById('maxFrequency').value);
@@ -92,7 +96,29 @@ settingsButton.addEventListener('click', () => {
 rollButton.addEventListener('click', rollDice);
 resetButton.addEventListener('click', resetStats);
 
+// Distribution view toggle
+const toggleNumbersBtn = document.getElementById('toggleNumbers');
+const toggleGraphBtn = document.getElementById('toggleGraph');
+
+toggleNumbersBtn.addEventListener('click', () => {
+    distributionView = 'numbers';
+    toggleNumbersBtn.classList.add('active');
+    toggleGraphBtn.classList.remove('active');
+    updateDistribution();
+});
+
+toggleGraphBtn.addEventListener('click', () => {
+    distributionView = 'graph';
+    toggleGraphBtn.classList.add('active');
+    toggleNumbersBtn.classList.remove('active');
+    updateDistribution();
+});
+
 // Settings change listeners (for when returning to settings page)
+document.getElementById('enableSound').addEventListener('change', (e) => {
+    enableSound = e.target.checked;
+});
+
 document.getElementById('enableWindow').addEventListener('change', (e) => {
     enableWindow = e.target.checked;
 });
@@ -146,6 +172,9 @@ function shouldAllowSeven() {
 
 // Play dice roll sound using uploaded audio file
 function playDiceRollSound() {
+    // Only play sound if enabled in settings
+    if (!enableSound) return;
+
     const audio = new Audio('dice.mp3');
     audio.volume = 0.6; // Adjust volume as needed
     audio.play().catch(err => {
@@ -296,107 +325,130 @@ function updateDistribution() {
         actualPercentages[i] = totalRolls > 0 ? (distribution[i] / totalRolls) : 0;
     }
 
-    // Find max value for scaling (use the higher of actual or expected)
-    const maxActual = Math.max(...Object.values(actualPercentages));
-    const maxExpected = Math.max(...Object.values(expectedProbabilities));
-    const maxValue = Math.max(maxActual, maxExpected, 0.01); // Ensure non-zero
-
-    // Create SVG line graph
-    const graphHeight = 200;
-    const padding = 10;
-
-    // Calculate points for both lines
-    const expectedPoints = [];
-    const actualPoints = [];
-
-    for (let i = 2; i <= 12; i++) {
-        const x = ((i - 2) / 10) * 100; // 0% to 100%
-        const expectedY = graphHeight - ((expectedProbabilities[i] / maxValue) * (graphHeight - padding * 2)) - padding;
-        const actualY = graphHeight - ((actualPercentages[i] / maxValue) * (graphHeight - padding * 2)) - padding;
-
-        expectedPoints.push({ x, y: expectedY });
-        actualPoints.push({ x, y: actualY });
-    }
-
-    // Create smooth curves - simple quadratic curves between points
-    function createSmoothPath(points) {
-        if (points.length === 0) return '';
-        if (points.length === 1) return `M ${points[0].x},${points[0].y}`;
-
-        let path = `M ${points[0].x},${points[0].y}`;
-
-        // Use simple quadratic curves
-        for (let i = 0; i < points.length - 1; i++) {
-            const current = points[i];
-            const next = points[i + 1];
-
-            // Control point is at the midpoint horizontally, averaging the Y values
-            const cpx = (current.x + next.x) / 2;
-            const cpy = (current.y + next.y) / 2;
-
-            path += ` Q ${cpx},${cpy} ${next.x},${next.y}`;
-        }
-
-        return path;
-    }
-
-    const expectedPath = createSmoothPath(expectedPoints);
-    const actualPath = createSmoothPath(actualPoints);
-
-    distributionDisplay.innerHTML = `
-        <svg class="line-graph" viewBox="0 0 100 ${graphHeight}" preserveAspectRatio="none">
-            <defs>
-                <linearGradient id="actualGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                    <stop offset="0%" style="stop-color:#ec4899;stop-opacity:1" />
-                    <stop offset="100%" style="stop-color:#d946ef;stop-opacity:1" />
-                </linearGradient>
-            </defs>
-            <!-- Expected line (bell curve) -->
-            <path
-                class="line expected-line"
-                d="${expectedPath}"
-                fill="none"
-            />
-            <!-- Actual line -->
-            <path
-                class="line actual-line"
-                d="${actualPath}"
-                fill="none"
-            />
-            <!-- Expected dots -->
-            ${expectedPoints.map(point => {
-                return `<circle cx="${point.x}" cy="${point.y}" r="0.8" class="dot expected-dot" />`;
-            }).join('')}
-            <!-- Actual dots -->
-            ${actualPoints.map(point => {
-                return `<circle cx="${point.x}" cy="${point.y}" r="0.8" class="dot actual-dot" />`;
-            }).join('')}
-        </svg>
-        <div class="x-axis-labels">
-            ${[2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(num => `
-                <div class="axis-label">
-                    <div class="label-number">${num}</div>
-                    <div class="label-count">${distribution[num]}</div>
-                </div>
-            `).join('')}
-        </div>
-    `;
-
-    // Add legend if not already present
-    if (!document.querySelector('.distribution-legend')) {
-        const legend = document.createElement('div');
-        legend.className = 'distribution-legend';
-        legend.innerHTML = `
-            <div class="legend-item">
-                <div class="legend-line expected"></div>
-                <span>Expected</span>
-            </div>
-            <div class="legend-item">
-                <div class="legend-line actual"></div>
-                <span>Actual</span>
+    if (distributionView === 'numbers') {
+        // Show numbers view
+        distributionDisplay.innerHTML = `
+            <div class="distribution-numbers">
+                ${[2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(num => {
+                    const actual = distribution[num];
+                    const actualPct = (actualPercentages[num] * 100).toFixed(1);
+                    const expectedPct = (expectedProbabilities[num] * 100).toFixed(1);
+                    return `
+                        <div class="number-item">
+                            <div class="number-value">${num}</div>
+                            <div class="number-count">${actual}</div>
+                            <div class="number-percentage">${actualPct}%</div>
+                        </div>
+                    `;
+                }).join('')}
             </div>
         `;
-        distributionDisplay.parentElement.insertBefore(legend, distributionDisplay);
+    } else {
+        // Show graph view with bars and trend line
+        const maxActual = Math.max(...Object.values(actualPercentages));
+        const maxExpected = Math.max(...Object.values(expectedProbabilities));
+        const maxValue = Math.max(maxActual, maxExpected, 0.01);
+
+        const graphHeight = 250;
+        const barWidth = 7;
+        const gap = 1.5;
+
+        // Calculate points for bars (actual data)
+        const barPoints = [];
+        for (let i = 2; i <= 12; i++) {
+            const x = ((i - 2) / 10) * 100;
+            const y = graphHeight - ((actualPercentages[i] / maxValue) * (graphHeight - 20)) - 10;
+            barPoints.push({ x, y, value: actualPercentages[i] });
+        }
+
+        // Create smoothed trend line using moving average
+        function createSmoothedTrendLine(points) {
+            if (points.length === 0) return { path: '', points: [] };
+
+            // Apply smoothing - weighted moving average
+            const smoothedPoints = [];
+            for (let i = 0; i < points.length; i++) {
+                let sum = 0;
+                let weight = 0;
+
+                // Use a window of 5 points with gaussian-like weights
+                for (let j = Math.max(0, i - 2); j <= Math.min(points.length - 1, i + 2); j++) {
+                    const distance = Math.abs(i - j);
+                    const w = distance === 0 ? 0.4 : (distance === 1 ? 0.25 : 0.1);
+                    sum += points[j].value * w;
+                    weight += w;
+                }
+
+                const smoothedValue = sum / weight;
+                const smoothedY = graphHeight - ((smoothedValue / maxValue) * (graphHeight - 20)) - 10;
+                smoothedPoints.push({ x: points[i].x, y: smoothedY });
+            }
+
+            // Create smooth curve through smoothed points using Catmull-Rom spline
+            if (smoothedPoints.length === 1) return { path: `M ${smoothedPoints[0].x},${smoothedPoints[0].y}`, points: smoothedPoints };
+
+            let path = `M ${smoothedPoints[0].x},${smoothedPoints[0].y}`;
+
+            for (let i = 0; i < smoothedPoints.length - 1; i++) {
+                const p0 = smoothedPoints[Math.max(0, i - 1)];
+                const p1 = smoothedPoints[i];
+                const p2 = smoothedPoints[i + 1];
+                const p3 = smoothedPoints[Math.min(smoothedPoints.length - 1, i + 2)];
+
+                // Create smooth curve using cubic bezier
+                const cp1x = p1.x + (p2.x - p0.x) / 6;
+                const cp1y = p1.y + (p2.y - p0.y) / 6;
+                const cp2x = p2.x - (p3.x - p1.x) / 6;
+                const cp2y = p2.y - (p3.y - p1.y) / 6;
+
+                path += ` C ${cp1x},${cp1y} ${cp2x},${cp2y} ${p2.x},${p2.y}`;
+            }
+
+            return { path, points: smoothedPoints };
+        }
+
+        const trendLine = createSmoothedTrendLine(barPoints);
+        const trendPath = trendLine.path;
+        const trendPoints = trendLine.points;
+
+        distributionDisplay.innerHTML = `
+            <svg class="bar-graph" viewBox="0 0 100 ${graphHeight}" preserveAspectRatio="none">
+                <defs>
+                    <linearGradient id="barGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                        <stop offset="0%" style="stop-color:#ec4899;stop-opacity:0.9" />
+                        <stop offset="100%" style="stop-color:#d946ef;stop-opacity:0.7" />
+                    </linearGradient>
+                </defs>
+                <!-- Bars for actual distribution -->
+                ${[2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((num, index) => {
+                    const x = ((num - 2) / 10) * 100;
+                    const barHeight = (actualPercentages[num] / maxValue) * (graphHeight - 20);
+                    const y = graphHeight - barHeight - 10;
+                    return `<rect x="${x - barWidth/2}" y="${y}" width="${barWidth}" height="${barHeight}" fill="url(#barGradient)" class="bar" />`;
+                }).join('')}
+                <!-- Trend line overlay -->
+                <path
+                    class="trend-line"
+                    d="${trendPath}"
+                    fill="none"
+                    stroke="#d946ef"
+                    stroke-width="2"
+                    opacity="0.8"
+                />
+                <!-- Trend line dots -->
+                ${trendPoints.map(point => {
+                    return `<circle cx="${point.x}" cy="${point.y}" r="1.2" fill="#d946ef" class="trend-dot" />`;
+                }).join('')}
+            </svg>
+            <div class="x-axis-labels">
+                ${[2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(num => `
+                    <div class="axis-label">
+                        <div class="label-number">${num}</div>
+                        <div class="label-count">${distribution[num]}</div>
+                    </div>
+                `).join('')}
+            </div>
+        `;
     }
 }
 
