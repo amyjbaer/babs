@@ -12,6 +12,21 @@ let enableSound = true; // Dice roll sound effects toggle
 let enableBombSound = true; // Bomb explosion sound toggle
 let distributionView = 'numbers'; // 'numbers' or 'graph'
 
+// Shared AudioContext for Web Audio API sounds (needed for mobile compatibility)
+let sharedAudioContext = null;
+
+// Get or create the shared AudioContext, resuming it if suspended (mobile browsers)
+function getAudioContext() {
+    if (!sharedAudioContext) {
+        sharedAudioContext = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    // Resume if suspended (required for mobile browsers after user interaction)
+    if (sharedAudioContext.state === 'suspended') {
+        sharedAudioContext.resume();
+    }
+    return sharedAudioContext;
+}
+
 // Initialize distribution
 for (let i = 2; i <= 12; i++) {
     distribution[i] = 0;
@@ -189,7 +204,7 @@ function playDiceRollSound() {
 function playBombSound() {
     if (!enableBombSound) return;
 
-    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    const audioContext = getAudioContext();
     const duration = 2;
 
     // Create explosion sound with multiple layers
@@ -248,7 +263,7 @@ function playBombSound() {
 function playSevenFallSound() {
     if (!enableBombSound) return;
 
-    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    const audioContext = getAudioContext();
 
     // Falling whistle sound - descending pitch
     const whistle = audioContext.createOscillator();
