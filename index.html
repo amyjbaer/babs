@@ -21,19 +21,35 @@
             <div class="settings-content">
                 <div class="settings-section">
                     <h3 class="section-title">🔊 Sound</h3>
-                    <div class="setting-row">
+                    <div class="setting-row master-toggle">
                         <label class="toggle-label">
-                            <input type="checkbox" id="enableSound" checked>
+                            <input type="checkbox" id="enableAllSounds" checked>
                             <span class="toggle-switch"></span>
-                            <span class="toggle-text">Dice Roll Sound Effects</span>
+                            <span class="toggle-text">Sound Effects</span>
                         </label>
                     </div>
-                    <div class="setting-row">
-                        <label class="toggle-label">
-                            <input type="checkbox" id="enableBombSound" checked>
-                            <span class="toggle-switch"></span>
-                            <span class="toggle-text">Bomb Explosion Sound (When 7 is Rolled)</span>
-                        </label>
+                    <div class="sound-options">
+                        <div class="setting-row">
+                            <label class="toggle-label">
+                                <input type="checkbox" id="enableSound" checked>
+                                <span class="toggle-switch"></span>
+                                <span class="toggle-text">Dice Roll Sound</span>
+                            </label>
+                        </div>
+                        <div class="setting-row">
+                            <label class="toggle-label">
+                                <input type="checkbox" id="enableBombSound" checked>
+                                <span class="toggle-switch"></span>
+                                <span class="toggle-text">Bomb Explosion Sound (When 7 is Rolled)</span>
+                            </label>
+                        </div>
+                        <div class="setting-row">
+                            <label class="toggle-label">
+                                <input type="checkbox" id="enableBlockSound" checked>
+                                <span class="toggle-switch"></span>
+                                <span class="toggle-text">Buzzer Sound (When 7 is Blocked)</span>
+                            </label>
+                        </div>
                     </div>
                 </div>
 
@@ -86,7 +102,10 @@
         <div class="container">
             <div class="header-bar">
                 <h1>B.A.B.S.</h1>
-                <button class="icon-button" id="settingsButton" title="Settings">⚙️</button>
+                <div class="header-buttons">
+                    <button class="icon-button" id="viewStatsButton" title="View Statistics">📊</button>
+                    <button class="icon-button" id="settingsButton" title="Settings">⚙️</button>
+                </div>
             </div>
 
             <div class="dice-container">
@@ -135,7 +154,7 @@
                 </div>
             </div>
 
-            <button class="secondary-button" id="viewStatsButton">View Detailed Statistics</button>
+
         </div>
     </div>
 
@@ -170,7 +189,7 @@
                 </div>
             </div>
 
-            <h3>Roll History (Last 20)</h3>
+            <h3>Roll History</h3>
             <div class="history" id="history"></div>
 
             <div class="distribution-header">
@@ -219,8 +238,8 @@
                     <h3>Getting Started</h3>
                     <ol class="feature-list">
                         <li>Click <strong>"Roll Dice"</strong> to start rolling</li>
-                        <li>Visit <strong>Settings ⚙️</strong> to customize seven frequency</li>
-                        <li>Check <strong>"View Detailed Statistics"</strong> to see your roll history and distribution</li>
+                        <li>Tap <strong>⚙️</strong> to customize seven frequency settings</li>
+                        <li>Tap <strong>📊</strong> to see your roll history and distribution</li>
                     </ol>
                 </div>
             </div>

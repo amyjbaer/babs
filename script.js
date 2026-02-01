@@ -8,12 +8,66 @@ let maxSevens = 2;
 let rollWindow = 3;
 let maxPercentage = 16.67;
 let preventedSevens = 0;
+let enableAllSounds = true; // Master sound toggle
 let enableSound = true; // Dice roll sound effects toggle
 let enableBombSound = true; // Bomb explosion sound toggle
+let enableBlockSound = true; // Blocked 7 buzzer sound toggle
 let distributionView = 'numbers'; // 'numbers' or 'graph'
+
+// ========================================
+// SETTINGS PERSISTENCE
+// ========================================
+
+// Load settings from localStorage
+function loadSettings() {
+    const savedSettings = localStorage.getItem('babsSettings');
+    if (savedSettings) {
+        try {
+            const settings = JSON.parse(savedSettings);
+            enableWindow = settings.enableWindow ?? true;
+            enablePercentage = settings.enablePercentage ?? true;
+            maxSevens = settings.maxSevens ?? 2;
+            rollWindow = settings.rollWindow ?? 3;
+            maxPercentage = settings.maxPercentage ?? 16.67;
+            enableAllSounds = settings.enableAllSounds ?? true;
+            enableSound = settings.enableSound ?? true;
+            enableBombSound = settings.enableBombSound ?? true;
+            enableBlockSound = settings.enableBlockSound ?? true;
+            distributionView = settings.distributionView ?? 'numbers';
+        } catch (e) {
+            console.error('Failed to load settings:', e);
+        }
+    }
+}
+
+// Save settings to localStorage
+function saveSettings() {
+    const settings = {
+        enableWindow,
+        enablePercentage,
+        maxSevens,
+        rollWindow,
+        maxPercentage,
+        enableAllSounds,
+        enableSound,
+        enableBombSound,
+        enableBlockSound,
+        distributionView
+    };
+    localStorage.setItem('babsSettings', JSON.stringify(settings));
+}
+
+// Load settings on startup
+loadSettings();
 
 // Shared AudioContext for Web Audio API sounds (needed for mobile compatibility)
 let sharedAudioContext = null;
+
+// Flag to prevent rolling during bomb explosion animation
+let isExploding = false;
+
+// Flag to prevent rolling while dice animation is in progress
+let isRolling = false;
 
 // Get or create the shared AudioContext, resuming it if suspended (mobile browsers)
 function getAudioContext() {
@@ -49,13 +103,23 @@ function showPage(pageName) {
 
     // Update settings form when opening settings page
     if (pageName === 'settings') {
+        document.getElementById('enableAllSounds').checked = enableAllSounds;
         document.getElementById('enableSound').checked = enableSound;
         document.getElementById('enableBombSound').checked = enableBombSound;
+        document.getElementById('enableBlockSound').checked = enableBlockSound;
         document.getElementById('enableWindow').checked = enableWindow;
         document.getElementById('enablePercentage').checked = enablePercentage;
         document.getElementById('maxFrequency').value = maxSevens;
         document.getElementById('rollWindow').value = rollWindow;
         document.getElementById('maxPercentage').value = maxPercentage;
+
+        // Update disabled state of individual sound toggles
+        const soundOptions = document.querySelector('.sound-options');
+        const toggles = soundOptions.querySelectorAll('input[type="checkbox"]');
+        toggles.forEach(toggle => {
+            toggle.disabled = !enableAllSounds;
+        });
+        soundOptions.classList.toggle('disabled', !enableAllSounds);
     }
 }
 
@@ -87,8 +151,10 @@ const settingsButton = document.getElementById('settingsButton');
 // Event listeners - Navigation
 backFromSettingsButton.addEventListener('click', () => {
     // Save settings when leaving settings page
+    enableAllSounds = document.getElementById('enableAllSounds').checked;
     enableSound = document.getElementById('enableSound').checked;
     enableBombSound = document.getElementById('enableBombSound').checked;
+    enableBlockSound = document.getElementById('enableBlockSound').checked;
     enableWindow = document.getElementById('enableWindow').checked;
     enablePercentage = document.getElementById('enablePercentage').checked;
     maxSevens = parseInt(document.getElementById('maxFrequency').value);
@@ -123,6 +189,7 @@ toggleNumbersBtn.addEventListener('click', () => {
     toggleNumbersBtn.classList.add('active');
     toggleGraphBtn.classList.remove('active');
     updateDistribution();
+    saveSettings();
 });
 
 toggleGraphBtn.addEventListener('click', () => {
@@ -130,31 +197,65 @@ toggleGraphBtn.addEventListener('click', () => {
     toggleGraphBtn.classList.add('active');
     toggleNumbersBtn.classList.remove('active');
     updateDistribution();
+    saveSettings();
 });
 
+// Helper to enable/disable individual sound toggles based on master
+function updateSoundTogglesState(enabled) {
+    const soundOptions = document.querySelector('.sound-options');
+    const toggles = soundOptions.querySelectorAll('input[type="checkbox"]');
+    toggles.forEach(toggle => {
+        toggle.disabled = !enabled;
+    });
+    // Add/remove disabled styling
+    soundOptions.classList.toggle('disabled', !enabled);
+}
+
 // Settings change listeners (for when returning to settings page)
+document.getElementById('enableAllSounds').addEventListener('change', (e) => {
+    enableAllSounds = e.target.checked;
+    updateSoundTogglesState(e.target.checked);
+    saveSettings();
+});
+
 document.getElementById('enableSound').addEventListener('change', (e) => {
     enableSound = e.target.checked;
+    saveSettings();
+});
+
+document.getElementById('enableBombSound').addEventListener('change', (e) => {
+    enableBombSound = e.target.checked;
+    saveSettings();
+});
+
+document.getElementById('enableBlockSound').addEventListener('change', (e) => {
+    enableBlockSound = e.target.checked;
+    saveSettings();
 });
 
 document.getElementById('enableWindow').addEventListener('change', (e) => {
     enableWindow = e.target.checked;
+    saveSettings();
 });
 
 document.getElementById('enablePercentage').addEventListener('change', (e) => {
     enablePercentage = e.target.checked;
+    saveSettings();
 });
 
 document.getElementById('maxFrequency').addEventListener('change', (e) => {
     maxSevens = parseInt(e.target.value);
+    saveSettings();
 });
 
 document.getElementById('rollWindow').addEventListener('change', (e) => {
     rollWindow = parseInt(e.target.value);
+    saveSettings();
 });
 
 document.getElementById('maxPercentage').addEventListener('change', (e) => {
     maxPercentage = parseFloat(e.target.value);
+    saveSettings();
 });
 
 // Roll a single die (1-6)
@@ -191,7 +292,7 @@ function shouldAllowSeven() {
 // Play dice roll sound using uploaded audio file
 function playDiceRollSound() {
     // Only play sound if enabled in settings
-    if (!enableSound) return;
+    if (!enableAllSounds || !enableSound) return;
 
     const audio = new Audio('dice.mp3');
     audio.volume = 0.6; // Adjust volume as needed
@@ -202,7 +303,7 @@ function playDiceRollSound() {
 
 // Play bomb explosion sound
 function playBombSound() {
-    if (!enableBombSound) return;
+    if (!enableAllSounds || !enableBombSound) return;
 
     const audioContext = getAudioContext();
     const duration = 2;
@@ -261,7 +362,7 @@ function playBombSound() {
 
 // Play dramatic falling sound for the 7
 function playSevenFallSound() {
-    if (!enableBombSound) return;
+    if (!enableAllSounds || !enableBombSound) return;
 
     const audioContext = getAudioContext();
 
@@ -297,8 +398,71 @@ function playSevenFallSound() {
     vibrato.stop(audioContext.currentTime + 1.5);
 }
 
+// Play buzzer/blowhorn sound when a 7 is blocked (wrong answer style)
+function playBlockedSound() {
+    if (!enableAllSounds || !enableBlockSound) return;
+
+    const audioContext = getAudioContext();
+    const duration = 0.6;
+
+    // Create a harsh buzzer sound like a game show wrong answer
+    // Layer 1: Low harsh tone
+    const osc1 = audioContext.createOscillator();
+    const gain1 = audioContext.createGain();
+    osc1.type = 'sawtooth';
+    osc1.frequency.setValueAtTime(80, audioContext.currentTime);
+    gain1.gain.setValueAtTime(0.3, audioContext.currentTime);
+    gain1.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration);
+    osc1.connect(gain1);
+    gain1.connect(audioContext.destination);
+
+    // Layer 2: Slightly higher dissonant tone
+    const osc2 = audioContext.createOscillator();
+    const gain2 = audioContext.createGain();
+    osc2.type = 'sawtooth';
+    osc2.frequency.setValueAtTime(98, audioContext.currentTime); // Dissonant interval
+    gain2.gain.setValueAtTime(0.25, audioContext.currentTime);
+    gain2.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration);
+    osc2.connect(gain2);
+    gain2.connect(audioContext.destination);
+
+    // Layer 3: Add some noise for harshness
+    const bufferSize = audioContext.sampleRate * duration;
+    const noiseBuffer = audioContext.createBuffer(1, bufferSize, audioContext.sampleRate);
+    const output = noiseBuffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+        output[i] = Math.random() * 2 - 1;
+    }
+    const noise = audioContext.createBufferSource();
+    noise.buffer = noiseBuffer;
+    const noiseGain = audioContext.createGain();
+    const noiseFilter = audioContext.createBiquadFilter();
+    noiseFilter.type = 'lowpass';
+    noiseFilter.frequency.setValueAtTime(500, audioContext.currentTime);
+    noiseGain.gain.setValueAtTime(0.15, audioContext.currentTime);
+    noiseGain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration);
+    noise.connect(noiseFilter);
+    noiseFilter.connect(noiseGain);
+    noiseGain.connect(audioContext.destination);
+
+    // Start all layers
+    osc1.start(audioContext.currentTime);
+    osc1.stop(audioContext.currentTime + duration);
+    osc2.start(audioContext.currentTime);
+    osc2.stop(audioContext.currentTime + duration);
+    noise.start(audioContext.currentTime);
+    noise.stop(audioContext.currentTime + duration);
+}
+
 // Roll two dice with frequency control
 function rollDice() {
+    // Prevent rolling during bomb explosion or dice animation
+    if (isExploding || isRolling) return;
+
+    // Disable button during roll animation
+    isRolling = true;
+    rollButton.disabled = true;
+
     let value1, value2, total;
     let attempts = 0;
     const maxAttempts = 100;
@@ -350,6 +514,9 @@ function rollDice() {
 
         // Show prevention effect if a seven was prevented
         if (sevenWasPrevented && total !== 7) {
+            // Play buzzer sound for blocked 7
+            playBlockedSound();
+
             // Create particle explosion
             createParticles();
 
@@ -369,6 +536,12 @@ function rollDice() {
         // Remove animation
         die1.classList.remove('rolling');
         die2.classList.remove('rolling');
+
+        // Re-enable roll button (unless a 7 triggers explosion)
+        if (total !== 7) {
+            isRolling = false;
+            rollButton.disabled = false;
+        }
 
         // Update statistics
         rollHistory.push(total);
@@ -395,23 +568,21 @@ function updateStats() {
     quickSevensCount.textContent = sevensCount;
     quickSevenFrequency.textContent = `${sevenFrequency}%`;
 
-    // Update history (last 20 rolls)
+    // Update history (all rolls)
     updateHistory();
 
     // Update distribution chart
     updateDistribution();
 }
 
-// Update roll history display
+// Update roll history display (CSS limits to 2 rows via max-height)
 function updateHistory() {
-    const last20Rolls = rollHistory.slice(-20);
-    const last20Meta = rollMetadata.slice(-20);
-
-    historyDisplay.innerHTML = last20Rolls.map((roll, index) => {
-        const wasPrevented = last20Meta[index]?.preventedSeven || false;
-        const preventedClass = wasPrevented ? 'prevented' : '';
-        const preventedIndicator = wasPrevented ? '<span class="prevented-indicator">🚫</span>' : '';
-        return `<div class="history-item ${roll === 7 ? 'seven' : ''} ${preventedClass}">${roll}${preventedIndicator}</div>`;
+    historyDisplay.innerHTML = rollHistory.map((roll, index) => {
+        const wasPrevented = rollMetadata[index]?.preventedSeven || false;
+        if (wasPrevented) {
+            return `<div class="history-item prevented">7<span class="prevented-x">×</span></div>`;
+        }
+        return `<div class="history-item ${roll === 7 ? 'seven' : ''}">${roll}</div>`;
     }).reverse().join('');
 }
 
@@ -571,6 +742,10 @@ function updateDistribution() {
 function celebrateSeven() {
     console.log('💣 BOOM! Seven rolled - explosion triggered!');
 
+    // Disable rolling during explosion
+    isExploding = true;
+    rollButton.disabled = true;
+
     // Play bomb sound
     playBombSound();
 
@@ -616,7 +791,7 @@ function celebrateSeven() {
             el.classList.add('fall-apart');
 
             // Play dramatic falling sound when total 7 falls
-            if (el === totalDisplay && enableBombSound) {
+            if (el === totalDisplay) {
                 playSevenFallSound();
             }
         }, delay);
@@ -629,6 +804,10 @@ function celebrateSeven() {
             el.classList.remove('fall-apart');
             el.style.removeProperty('--random-x');
         });
+        // Re-enable rolling after explosion completes
+        isExploding = false;
+        isRolling = false;
+        rollButton.disabled = false;
     }, 3000);
 
     // Create explosion particles
@@ -720,8 +899,22 @@ function createParticles() {
     }
 }
 
-// Initialize display
-updateDistribution();
+// Initialize display based on loaded settings
+function initializeUI() {
+    // Set distribution view toggle based on saved setting
+    if (distributionView === 'graph') {
+        toggleGraphBtn.classList.add('active');
+        toggleNumbersBtn.classList.remove('active');
+    } else {
+        toggleNumbersBtn.classList.add('active');
+        toggleGraphBtn.classList.remove('active');
+    }
+
+    // Update distribution display
+    updateDistribution();
+}
+
+initializeUI();
 
 // ========================================
 // WELCOME MODAL

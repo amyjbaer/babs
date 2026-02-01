@@ -2,3 +2,4 @@
 - starting rolls to see who gets to go first
 - record our own voices saying the number
 - history to see how many rolls it takes for games to be completed and length of time
+- more flames with 7 bomb
