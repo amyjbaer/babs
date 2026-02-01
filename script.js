@@ -8,7 +8,8 @@ let maxSevens = 2;
 let rollWindow = 3;
 let maxPercentage = 16.67;
 let preventedSevens = 0;
-let enableSound = true; // Sound effects toggle
+let enableSound = true; // Dice roll sound effects toggle
+let enableBombSound = true; // Bomb explosion sound toggle
 let distributionView = 'numbers'; // 'numbers' or 'graph'
 
 // Initialize distribution
@@ -34,6 +35,7 @@ function showPage(pageName) {
     // Update settings form when opening settings page
     if (pageName === 'settings') {
         document.getElementById('enableSound').checked = enableSound;
+        document.getElementById('enableBombSound').checked = enableBombSound;
         document.getElementById('enableWindow').checked = enableWindow;
         document.getElementById('enablePercentage').checked = enablePercentage;
         document.getElementById('maxFrequency').value = maxSevens;
@@ -71,6 +73,7 @@ const settingsButton = document.getElementById('settingsButton');
 backFromSettingsButton.addEventListener('click', () => {
     // Save settings when leaving settings page
     enableSound = document.getElementById('enableSound').checked;
+    enableBombSound = document.getElementById('enableBombSound').checked;
     enableWindow = document.getElementById('enableWindow').checked;
     enablePercentage = document.getElementById('enablePercentage').checked;
     maxSevens = parseInt(document.getElementById('maxFrequency').value);
@@ -180,6 +183,103 @@ function playDiceRollSound() {
     audio.play().catch(err => {
         console.log('Audio playback failed:', err);
     });
+}
+
+// Play bomb explosion sound
+function playBombSound() {
+    if (!enableBombSound) return;
+
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    const duration = 2;
+
+    // Create explosion sound with multiple layers
+    // Layer 1: Deep bass boom
+    const bass = audioContext.createOscillator();
+    const bassGain = audioContext.createGain();
+    bass.type = 'sine';
+    bass.frequency.setValueAtTime(80, audioContext.currentTime);
+    bass.frequency.exponentialRampToValueAtTime(20, audioContext.currentTime + 0.5);
+    bassGain.gain.setValueAtTime(0.8, audioContext.currentTime);
+    bassGain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 1);
+    bass.connect(bassGain);
+    bassGain.connect(audioContext.destination);
+
+    // Layer 2: Mid-range explosion
+    const mid = audioContext.createOscillator();
+    const midGain = audioContext.createGain();
+    mid.type = 'triangle';
+    mid.frequency.setValueAtTime(200, audioContext.currentTime);
+    mid.frequency.exponentialRampToValueAtTime(50, audioContext.currentTime + 0.3);
+    midGain.gain.setValueAtTime(0.5, audioContext.currentTime);
+    midGain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.8);
+    mid.connect(midGain);
+    midGain.connect(audioContext.destination);
+
+    // Layer 3: White noise burst
+    const bufferSize = audioContext.sampleRate * 0.5;
+    const noiseBuffer = audioContext.createBuffer(1, bufferSize, audioContext.sampleRate);
+    const output = noiseBuffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+        output[i] = Math.random() * 2 - 1;
+    }
+    const noise = audioContext.createBufferSource();
+    noise.buffer = noiseBuffer;
+    const noiseGain = audioContext.createGain();
+    const noiseFilter = audioContext.createBiquadFilter();
+    noiseFilter.type = 'lowpass';
+    noiseFilter.frequency.setValueAtTime(1000, audioContext.currentTime);
+    noiseFilter.frequency.exponentialRampToValueAtTime(100, audioContext.currentTime + 0.3);
+    noiseGain.gain.setValueAtTime(0.6, audioContext.currentTime);
+    noiseGain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+    noise.connect(noiseFilter);
+    noiseFilter.connect(noiseGain);
+    noiseGain.connect(audioContext.destination);
+
+    // Start all layers
+    bass.start(audioContext.currentTime);
+    bass.stop(audioContext.currentTime + duration);
+    mid.start(audioContext.currentTime);
+    mid.stop(audioContext.currentTime + duration);
+    noise.start(audioContext.currentTime);
+    noise.stop(audioContext.currentTime + 0.5);
+}
+
+// Play dramatic falling sound for the 7
+function playSevenFallSound() {
+    if (!enableBombSound) return;
+
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+    // Falling whistle sound - descending pitch
+    const whistle = audioContext.createOscillator();
+    const whistleGain = audioContext.createGain();
+    whistle.type = 'sine';
+
+    // Start high and drop down (like a falling bomb whistle)
+    whistle.frequency.setValueAtTime(1200, audioContext.currentTime);
+    whistle.frequency.exponentialRampToValueAtTime(200, audioContext.currentTime + 1.5);
+
+    // Fade in and out
+    whistleGain.gain.setValueAtTime(0, audioContext.currentTime);
+    whistleGain.gain.linearRampToValueAtTime(0.3, audioContext.currentTime + 0.1);
+    whistleGain.gain.linearRampToValueAtTime(0.3, audioContext.currentTime + 1.2);
+    whistleGain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 1.5);
+
+    whistle.connect(whistleGain);
+    whistleGain.connect(audioContext.destination);
+
+    // Add vibrato for dramatic effect
+    const vibrato = audioContext.createOscillator();
+    const vibratoGain = audioContext.createGain();
+    vibrato.frequency.setValueAtTime(6, audioContext.currentTime);
+    vibratoGain.gain.setValueAtTime(30, audioContext.currentTime);
+    vibrato.connect(vibratoGain);
+    vibratoGain.connect(whistle.frequency);
+
+    whistle.start(audioContext.currentTime);
+    whistle.stop(audioContext.currentTime + 1.5);
+    vibrato.start(audioContext.currentTime);
+    vibrato.stop(audioContext.currentTime + 1.5);
 }
 
 // Roll two dice with frequency control
@@ -452,22 +552,119 @@ function updateDistribution() {
     }
 }
 
-// Celebrate when a 7 is rolled!
+// Bomb explosion when a 7 is rolled!
 function celebrateSeven() {
-    // Add celebration class to the container
+    console.log('💣 BOOM! Seven rolled - explosion triggered!');
+
+    // Play bomb sound
+    playBombSound();
+
+    // Add explosion class to the container
     const container = document.querySelector('.container');
-    container.classList.add('celebrate-seven');
+    container.classList.add('explode');
 
-    // Pulse the dice
-    die1.classList.add('pulse-seven');
-    die2.classList.add('pulse-seven');
+    // Create explosion flash
+    const flash = document.createElement('div');
+    flash.className = 'explosion-flash';
+    document.body.appendChild(flash);
 
-    // Remove celebration effects after animation
+    // Remove flash after animation
     setTimeout(() => {
-        container.classList.remove('celebrate-seven');
-        die1.classList.remove('pulse-seven');
-        die2.classList.remove('pulse-seven');
-    }, 2000);
+        flash.remove();
+    }, 500);
+
+    // Make all elements fall apart - target the current visible page
+    const currentPage = document.querySelector('.page:not(.hidden)');
+    const allElements = Array.from(currentPage.querySelectorAll('h1, h2, h3, button, .dice-container, .quick-stats, .stat-card, .history, .distribution, .number-item, .bar-graph, .setting-row, .settings-section'));
+
+    // Add the total display to fall last
+    const totalDisplay = document.getElementById('total');
+    console.log('Total display element:', totalDisplay);
+    if (totalDisplay) {
+        allElements.push(totalDisplay);
+        console.log('✅ Total display added to falling elements');
+    }
+
+    console.log(`Found ${allElements.length} elements to explode`);
+
+    allElements.forEach((el, index) => {
+        // Add random direction for each element
+        el.style.setProperty('--random-x', Math.random());
+
+        // Total display falls after 0.5 seconds so user can read it
+        const delay = (el === totalDisplay) ? 500 : index * 30;
+
+        setTimeout(() => {
+            if (el === totalDisplay) {
+                console.log('🎯 Making total display fall now!');
+            }
+            el.classList.add('fall-apart');
+
+            // Play dramatic falling sound when total 7 falls
+            if (el === totalDisplay && enableBombSound) {
+                playSevenFallSound();
+            }
+        }, delay);
+    });
+
+    // Reset everything after explosion
+    setTimeout(() => {
+        container.classList.remove('explode');
+        allElements.forEach(el => {
+            el.classList.remove('fall-apart');
+            el.style.removeProperty('--random-x');
+        });
+    }, 3000);
+
+    // Create explosion particles
+    createExplosionParticles();
+}
+
+// Create explosion particles
+function createExplosionParticles() {
+    const particlesContainer = document.getElementById('particles');
+    particlesContainer.innerHTML = ''; // Clear existing particles
+
+    // Create 100 explosion particles
+    for (let i = 0; i < 100; i++) {
+        const particle = document.createElement('div');
+        particle.className = 'explosion-particle';
+
+        // Random starting position near center
+        const startX = 50 + (Math.random() - 0.5) * 20;
+        const startY = 50 + (Math.random() - 0.5) * 20;
+
+        // Random direction and distance
+        const angle = Math.random() * Math.PI * 2;
+        const distance = 100 + Math.random() * 200;
+        const endX = startX + Math.cos(angle) * distance;
+        const endY = startY + Math.sin(angle) * distance;
+
+        // Random size
+        const size = 5 + Math.random() * 15;
+
+        // Random colors (fire colors: red, orange, yellow)
+        const colors = ['#ff0000', '#ff4500', '#ff6600', '#ff8800', '#ffaa00', '#ffcc00'];
+        const color = colors[Math.floor(Math.random() * colors.length)];
+
+        particle.style.cssText = `
+            left: ${startX}%;
+            top: ${startY}%;
+            width: ${size}px;
+            height: ${size}px;
+            background: ${color};
+            --end-x: ${endX}%;
+            --end-y: ${endY}%;
+            animation-delay: ${Math.random() * 0.1}s;
+        `;
+
+        particlesContainer.appendChild(particle);
+
+        // Remove particle after animation
+        setTimeout(() => {
+            particle.remove();
+        }, 2000);
+    }
 }
 
 // Reset all statistics
